@@ -1,0 +1,28 @@
+{
+  "name": "workout",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test-file.ts",
+  "scripts": {
+    "test": "jest"
+  },
+  "ts-node": {
+    "esm": true
+  },
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "jest-editor-support": "^31.1.2"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "compilerOptions": {
+    "esModuleInterop": true
+  }
+}
