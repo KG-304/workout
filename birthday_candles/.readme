@@ -1,0 +1,12 @@
+
+- goal:
+  - determine how many candles are the tallest
+
+- input provided: 
+  - size of candles 'n'
+  - array of the different candle heights [a,b,c...]
+
+- expected return value:
+  - number of candles that can be blown out. i.e. the number of time the tallest candle appears
+
+
