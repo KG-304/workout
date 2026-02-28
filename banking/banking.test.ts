@@ -183,4 +183,118 @@ describe("Bank transfer exercise", () => {
       });
     });
   });
+
+  describe("scheduled deposits", () => {
+    test("scheduleDeposit throws if account does not exist", () => {
+      const bank = new Bank();
+      expect(() => bank.scheduleDeposit("a", 10, 1000)).toThrow();
+    });
+
+    test("scheduleDeposit throws if amount is invalid", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+
+      expect(() => bank.scheduleDeposit("a", 0, 1000)).toThrow();
+      expect(() => bank.scheduleDeposit("a", -1, 1000)).toThrow();
+      expect(() => bank.scheduleDeposit("a", 1.5, 1000)).toThrow();
+      expect(() => bank.scheduleDeposit("a", NaN, 1000)).toThrow();
+    });
+
+    test("scheduleDeposit throws if timestamp is invalid", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+
+      expect(() => bank.scheduleDeposit("a", 10, NaN)).toThrow();
+      expect(() => bank.scheduleDeposit("a", 10, 1.1)).toThrow();
+    });
+  });
+
+  describe("scheduled deposits global limit", () => {
+    test("allows up to 5 scheduled deposits total", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+      bank.createAccount("b", 0);
+
+      expect(() => bank.scheduleDeposit("a", 10, 1000)).not.toThrow();
+      expect(() => bank.scheduleDeposit("b", 5, 2000)).not.toThrow();
+      expect(() => bank.scheduleDeposit("a", 7, 3000)).not.toThrow();
+      expect(() => bank.scheduleDeposit("b", 10, 4000)).not.toThrow();
+      expect(() => bank.scheduleDeposit("a", 5, 5000)).not.toThrow();
+    });
+
+    test("throws when scheduling more than 5 pending deposits globally", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+      bank.createAccount("b", 0);
+
+      bank.scheduleDeposit("a", 10, 1000);
+      bank.scheduleDeposit("b", 5, 2000);
+      bank.scheduleDeposit("a", 7, 3000);
+      bank.scheduleDeposit("b", 10, 4000);
+      bank.scheduleDeposit("a", 5, 5000);
+
+      expect(() => bank.scheduleDeposit("b", 7, 6000)).toThrow(
+        /5 scheduled deposits/i,
+      );
+    });
+
+    test("processed deposits free up global scheduled capacity", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+      bank.createAccount("b", 0);
+
+      bank.scheduleDeposit("a", 10, 2000);
+      bank.scheduleDeposit("b", 5, 1000);
+      bank.scheduleDeposit("a", 7, 5000);
+      bank.scheduleDeposit("b", 10, 3000);
+      bank.scheduleDeposit("a", 5, 9000);
+
+      // Process first 3
+      expect(bank.processScheduledDeposits(3000)).toBe(3);
+
+      // Should now allow more scheduling
+      expect(() => bank.scheduleDeposit("b", 20, 6000)).not.toThrow();
+
+      expect(() => bank.scheduleDeposit("a", 1, 7000)).not.toThrow();
+    });
+
+    test("processScheduledDeposits does not double-apply the same deposits", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 0);
+
+      bank.scheduleDeposit("a", 10, 1000);
+      expect(bank.processScheduledDeposits(1000)).toBe(1);
+      expect(bank.processScheduledDeposits(1000)).toBe(0);
+      expect(bank.getBalance("a")).toBe(10);
+    });
+
+    test("scheduled deposits affect total holdings only when processed", () => {
+      const bank = new Bank();
+      bank.createAccount("a", 10);
+      bank.createAccount("b", 5);
+
+      const before = bank.getTotalHoldings(); // 15
+
+      bank.scheduleDeposit("a", 10, 1000);
+      bank.scheduleDeposit("b", 20, 2000);
+
+      expect(bank.getTotalHoldings()).toBe(before); // still 15
+
+      bank.processScheduledDeposits(1500);
+      expect(bank.getTotalHoldings()).toBe(25);
+
+      bank.processScheduledDeposits(2500);
+      expect(bank.getTotalHoldings()).toBe(45);
+    });
+  });
+
+  // test("processing with no eligible deposits returns 0 and changes nothing", () => {
+  //   const bank = new Bank();
+  //   bank.createAccount("a", 10);
+
+  //   bank.scheduleDeposit("a", 10, 1000);
+
+  //   expect(bank.processScheduledDeposits(999)).toBe(0);
+  //   expect(bank.getBalance("a")).toBe(10);
+  // });
 });

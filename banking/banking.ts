@@ -1,8 +1,17 @@
-type AccountName = string;
-type AccountAmount = number;
+interface Account {
+  name: string;
+  amount: number;
+}
+
+interface ScheduledDeposit {
+  account: string;
+  amount: number;
+  timestamp: number;
+}
 
 export class Bank {
-  private accounts: Record<AccountName, AccountAmount> = {};
+  private accounts: Record<Account["name"], Account["amount"]> = {};
+  private scheduledDeposits: ScheduledDeposit[] = [];
 
   constructor() {}
 
@@ -14,7 +23,7 @@ export class Bank {
   }
 
   private checkInitialAmount(initialAmount: number) {
-    if (initialAmount < 0) {
+    if (initialAmount < 0 || !Number.isInteger(initialAmount)) {
       return false;
     } else {
       return true;
@@ -22,13 +31,53 @@ export class Bank {
   }
 
   private checkTransactionAmount(transactionAmount: number) {
-    if (transactionAmount <= 0) {
+    if (transactionAmount <= 0 || !Number.isInteger(transactionAmount)) {
       return false;
     }
-    if (!Number.isInteger(transactionAmount)) {
-      return false;
-    }
+
     return true;
+  }
+
+  processScheduledDeposits(timestamp: number) {
+    if (!this.checkInitialAmount(timestamp)) {
+      throw new Error(`${timestamp} is not a valid process time`);
+    }
+
+    const eligible = this.scheduledDeposits
+      .filter((d) => d.timestamp <= timestamp)
+      .slice()
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    for (const d of eligible) {
+      this.accounts[d.account] = this.accounts[d.account] + d.amount;
+    }
+
+    this.scheduledDeposits = this.scheduledDeposits.filter(
+      (d) => d.timestamp > timestamp,
+    );
+
+    return eligible.length;
+  }
+
+  scheduleDeposit(account: string, amount: number, timestamp: number) {
+    if (!this.validAccountExists(account)) {
+      throw new Error(`Account: ${account} does not exist`);
+    }
+    if (!this.checkTransactionAmount(amount)) {
+      throw new Error(`${amount} is not a valid submission`);
+    }
+
+    if (!this.checkInitialAmount(timestamp)) {
+      throw new Error(`${timestamp} is not a valid schedule time`);
+    }
+
+    if (this.scheduledDeposits.length === 5) {
+      throw new Error(
+        "You already have 5 scheduled deposits. Process them prior to scheduling more.",
+      );
+    }
+
+    this.scheduledDeposits.push({ account, amount, timestamp });
   }
 
   transfer(fromAccount: string, toAccount: string, transactionAmount: number) {
